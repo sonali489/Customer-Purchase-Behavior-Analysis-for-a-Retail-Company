@@ -1,69 +1,82 @@
-import pandas as pd
-import numpy as np
 from faker import Faker
+import pandas as pd
 import random
+from datetime import datetime, timedelta
 
+# Initialize Faker and random seed
 fake = Faker()
+Faker.seed(0)
+random.seed(0)
 
-# Generate Customers Data
-customers = pd.DataFrame({
-    'customer_id': range(1, 1001),
-    'name': [fake.name() for _ in range(1000)],
-    'email': [fake.email() for _ in range(1000)],
-    'gender': [random.choice(['Male', 'Female']) for _ in range(1000)],
-    'age': [random.randint(18, 70) for _ in range(1000)],
-    'loyalty_status': [random.choice(['Gold', 'Silver', 'Bronze']) for _ in range(1000)],
-    'signup_date': [fake.date_this_decade() for _ in range(1000)],
-    'city': [fake.city() for _ in range(1000)],
-    'state': [fake.state() for _ in range(1000)],
-    'country': ['USA' for _ in range(1000)]
-})
+# Function to generate random date between the given range
+def random_date(start_date, end_date):
+    return start_date + timedelta(days=random.randint(0, (end_date - start_date).days))
 
-# Generate Products Data
-products = pd.DataFrame({
-    'product_id': range(1, 501),
-    'product_name': [fake.word().capitalize() for _ in range(500)],
-    'category': [random.choice(['Electronics', 'Clothing', 'Home', 'Beauty']) for _ in range(500)],
-    'brand': [fake.company() for _ in range(500)],
-    'price': [round(random.uniform(10, 500), 2) for _ in range(500)],
-    'stock': [random.randint(0, 100) for _ in range(500)]
-})
+# Function to generate customer IDs from 1 to 400 which can be duplicated
+def generate_cust_ids(num_records):
+    return [random.randint(1, 400) for _ in range(num_records)]
 
-# Generate Stores Data
-stores = pd.DataFrame({
-    'store_id': range(1, 21),
-    'store_name': [f'Store {i}' for i in range(1, 21)],
-    'store_type': [random.choice(['Online', 'Physical']) for _ in range(20)],
-    'location': [fake.city() for _ in range(20)],
-    'manager_name': [fake.name() for _ in range(20)]
-})
+# Function to generate sample data with Faker and some anomalies
+def generate_data(num_records, data_type):
+    start_date = datetime.strptime("2023-01-01", "%Y-%m-%d")
+    end_date = datetime.strptime("2023-12-31", "%Y-%m-%d")
 
-# Generate Promotions Data
-promotions = pd.DataFrame({
-    'promotion_id': range(1, 51),
-    'promotion_name': [f'Promo {i}' for i in range(1, 51)],
-    'start_date': [fake.date_this_year() for _ in range(50)],
-    'end_date': [fake.date_this_year() for _ in range(50)],
-    'promotion_type': [random.choice(['Discount', 'BOGO', 'Free Shipping']) for _ in range(50)]
-})
+    cust_ids = generate_cust_ids(num_records)
 
-# Generate Transactions Data
-transactions = pd.DataFrame({
-    'transaction_id': range(1, 5001),
-    'customer_id': [random.randint(1, 1000) for _ in range(5000)],
-    'product_id': [random.randint(1, 500) for _ in range(5000)],
-    'store_id': [random.randint(1, 20) for _ in range(5000)],
-    'date': [fake.date_this_year() for _ in range(5000)],
-    'quantity': [random.randint(1, 5) for _ in range(5000)],
-    'total_amount': [round(random.uniform(20, 1000), 2) for _ in range(5000)],
-    'discount_amount': [round(random.uniform(0, 50), 2) for _ in range(5000)],
-    'payment_method': [random.choice(['Credit Card', 'Cash', 'PayPal']) for _ in range(5000)],
-    'promotion_id': [random.choice([None] + list(range(1, 51))) for _ in range(5000)]
-})
+    data = []
+    for cust_id in cust_ids:
+        date = random_date(start_date, end_date)
+        age = random.randint(18, 70)
+        gender = random.choice(['Male', 'Female'])
+        item = random.choice(['Electronics', 'Clothing', 'Grocery', 'Accessories'])
+        quantity = random.randint(1, 10)  # Number of items purchased
+        amount = round(random.uniform(5, 5000), 2)
+        discount = f"{random.randint(0, 100)}%"  # Discount shown as a percentage
+        rating = random.randint(1, 5)
+        transaction_id = fake.uuid4()
+        location = random.choice(['New York', 'California', 'Florida', 'Texas', 'Boston'])
 
-# Save to CSV or Excel files
-customers.to_csv('customers.csv', index=False)
-products.to_csv('products.csv', index=False)
-stores.to_csv('stores.csv', index=False)
-promotions.to_csv('promotions.csv', index=False)
-transactions.to_csv('transactions.csv', index=False)
+        # Introduce anomalies and outliers
+        if random.random() < 0.05:  # 5% chance to create an anomaly
+            age = random.choice([120, -5])  # Impossible age values
+            amount = random.choice([10000, -100])  # Outlier amount
+            discount = f"{random.choice([110, -10])}%"  # Invalid discount percentages
+            location = random.choice(['Unknown', 'N/A', 'Invalid Location'])  # Anomalous location values
+
+        data.append({
+            'cust_id': cust_id,
+            'date': date,
+            'age': age,
+            'gender': gender,
+            'item': item,
+            'quantity': quantity,
+            'amount': amount,
+            'discount': discount,
+            'rating': rating,
+            'transaction_id': transaction_id,
+            'location': location
+        })
+
+    return data
+
+# Generate data for each schema
+online_store_data = generate_data(600, 'online_store')
+pos_system_data = generate_data(800, 'pos_system')
+loyalty_program_data = generate_data(400, 'loyalty_program')
+
+# Create DataFrames for each schema
+online_store_df = pd.DataFrame(online_store_data)
+pos_system_df = pd.DataFrame(pos_system_data)
+loyalty_program_df = pd.DataFrame(loyalty_program_data)
+
+# Save the DataFrames as CSV files locally
+online_store_df.to_csv("online_store_schema.csv", index=False)
+pos_system_df.to_csv("pos_system_schema.csv", index=False)
+loyalty_program_df.to_csv("loyalty_program_schema.csv", index=False)
+
+# Display messages indicating where the files were saved
+print("CSV files saved successfully!")
+print("Files generated:")
+print("1. online_store_schema.csv")
+print("2. pos_system_schema.csv")
+print("3. loyalty_program_schema.csv")
